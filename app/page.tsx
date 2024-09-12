@@ -1,101 +1,164 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useState, useEffect } from 'react';
+import { AppBar, Box, Button, Card, CardContent, Chip, Divider, IconButton, Stack, TextField, Toolbar, Typography, Container } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
+import { ethers } from 'ethers';
+import { formatEther, parseUnits } from '@ethersproject/units';
+import { initializeConnector } from '@web3-react/core';
+import { MetaMask } from '@web3-react/metamask';
+import abi from './fonts/api.json';
+
+const [metaMask, hooks] = initializeConnector((actions) => new MetaMask({ actions }));
+const { useChainId, useAccounts, useIsActive, useProvider } = hooks;
+
+
+const contractChain = 11155111;
+const contractAddress = "0x1B6C07Cb03E1B618e2E85C9AFf77035eF4e69159"; // Address of the smart contract
+
+const getAddressTxt = (str: string | any[], s = 6, e = 6) => {
+  if (typeof str === 'string' && str.length > s + e) {
+    return `${str.slice(0, s)}...${str.slice(-e)}`;
+  }
+  return str;
+};
+
+export default function Page() {
+  const chainId = useChainId();
+  const accounts = useAccounts();
+  const isActive = useIsActive();
+  const provider = useProvider();
+  const [balance, setBalance] = useState<string>('');
+  const [ETHValue, setETHValue] = useState<number>(0);
+  const [error, setError] = useState<string | undefined>(undefined);
+  const [swap, setSwap] = useState(false)
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (!provider || !accounts?.[0]) {
+        return;
+      }
+
+      try {
+        const signer = provider.getSigner();
+        const smartContract = new ethers.Contract(contractAddress, abi, signer);
+        const myBalance = await smartContract.balanceOf(accounts[0]);
+
+        setBalance(formatEther(myBalance));
+      } catch (err) {
+        console.error('Error fetching balance:', err);
+        setError('Error fetching balance');
+      }
+    };
+
+    if (isActive) {
+      fetchBalance();
+    }
+  }, [isActive]);
+
+  const handleBuy = async () => {
+    if (ETHValue <= 0) {
+      return;
+    }
+
+
+    const signer = provider?.getSigner();
+    const smartContract = new ethers.Contract(contractAddress, abi, signer);
+    const weiValue = parseUnits(ETHValue.toString(), "ether");
+    const tx = await smartContract.buy({
+      value: weiValue.toString(),
+    });
+    setSwap(!swap)
+    console.log("Transaction hash:", tx.hash);
+  };
+
+
+
+  useEffect(() => {
+    void metaMask.connectEagerly().catch(() => {
+      console.debug("Failed to connect eagerly to MetaMask");
+    });
+  }, []);
+
+  const handleConnect = () => {
+    metaMask.activate(contractChain);
+  };
+
+  const handleDisconnect = () => {
+    metaMask.resetState();
+    alert(
+      "To fully disconnect, please remove this site from MetaMask's connected sites by locking MetaMask."
+    );
+  };
+
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+    <div>
+      <div className="Navbar">
+        <Box sx={{ flexGrow: 1 }}>
+          <AppBar position="static">
+            <Toolbar>
+              <IconButton
+                size="large"
+                edge="start"
+                color="inherit"
+                aria-label="menu"
+                sx={{ mr: 2 }}
+              >
+                <MenuIcon />
+              </IconButton>
+              <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+                News
+              </Typography>
+              {isActive ? (
+                <Stack direction="row" spacing={2}>
+                  <Chip className='text-white' label={accounts?.[0] ? getAddressTxt(accounts[0]) : 'No account'} variant="outlined" />
+                  <Button className='text-white' onClick={handleDisconnect}>Disconnect</Button>
+                </Stack>
+              ) : (
+                <Button className='text-white' onClick={handleConnect}>Connect</Button>
+              )}
+            </Toolbar>
+          </AppBar>
+        </Box>
+      </div>
+      <Card sx={{ minWidth: 275, mt: 2 }}>
+        <CardContent>
+          <Typography variant="h5" component="div">
+            <span>ChainId: </span>{chainId}
+          </Typography>
+          <Typography variant="h5" component="div">
+            <span>IsActive: </span>{isActive.toString()}
+          </Typography>
+          <Typography variant="h5" component="div">
+            <span>Accounts: </span>{accounts ? getAddressTxt(accounts[0]) : ''}
+          </Typography>
+        </CardContent>
+      </Card>
+      <Container maxWidth="sm" sx={{ mt: 2 }}>
+        {isActive ? (
+          <Card>
+            <CardContent>
+              <Stack spacing={2}>
+                <Typography>TPTP</Typography>
+                <TextField label="Contract Address" value={contractAddress} />
+                <TextField label="TPTP Balance" value={balance} />
+                <Divider />
+                <Typography>Buy TPTP (1 ETH = 100 TPTP)</Typography>
+                <TextField
+                  label="ETH"
+                  type="number"
+                  value={ETHValue}
+                  onChange={e => setETHValue(Number(e.target.value))}
+                />
+                <Button variant="contained" onClick={handleBuy}>
+                  Buy
+                </Button>
+                {error && <Typography color="error">{error}</Typography>}
+              </Stack>
+            </CardContent>
+          </Card>
+        ) : null}
+      </Container>
     </div>
   );
 }
