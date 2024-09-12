@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppBar, Box, Button, Card, CardContent, Chip, Divider, IconButton, Stack, TextField, Toolbar, Typography, Container } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import { ethers } from 'ethers';
+import { Signer, ethers } from 'ethers';
 import { formatEther, parseUnits } from '@ethersproject/units';
 import { initializeConnector } from '@web3-react/core';
 import { MetaMask } from '@web3-react/metamask';
@@ -39,7 +39,7 @@ export default function Page() {
       }
 
       try {
-        const signer = provider.getSigner();
+        const signer = provider.getSigner() as unknown as Signer;
         const smartContract = new ethers.Contract(contractAddress, abi, signer);
         const myBalance = await smartContract.balanceOf(accounts[0]);
 
@@ -61,7 +61,7 @@ export default function Page() {
     }
 
 
-    const signer = provider?.getSigner();
+    const signer = provider?.getSigner() as unknown as Signer;
     const smartContract = new ethers.Contract(contractAddress, abi, signer);
     const weiValue = parseUnits(ETHValue.toString(), "ether");
     const tx = await smartContract.buy({
