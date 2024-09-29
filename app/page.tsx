@@ -1,9 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { AppBar, Box, Button, Card, CardContent, Chip, Divider, IconButton, Stack, TextField, Toolbar, Typography, Container } from '@mui/material';
+import {
+  AppBar, Box, Button, Card, CardContent, Chip,
+  Divider, IconButton, Stack, TextField, Toolbar, Typography, Container
+} from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import { ethers } from 'ethers';
+import { Signer, ethers } from 'ethers';
 import { formatEther, parseUnits } from '@ethersproject/units';
 import { initializeConnector } from '@web3-react/core';
 import { MetaMask } from '@web3-react/metamask';
@@ -13,16 +16,16 @@ const [metaMask, hooks] = initializeConnector((actions) => new MetaMask({ action
 const { useChainId, useAccounts, useIsActive, useProvider } = hooks;
 
 const contractChain = 11155111;
-const contractAddress = "0x1B6C07Cb03E1B618e2E85C9AFf77035eF4e69159"; // Address of the smart contract
+const contractAddress = "0x1B6C07Cb03E1B618e2E85C9AFf77035eF4e69159";
 
-const getAddressTxt = (str: string | null, s = 6, e = 6) => {
+const getAddressTxt = (str: string | any[], s = 6, e = 6) => {
   if (typeof str === 'string' && str.length > s + e) {
     return `${str.slice(0, s)}...${str.slice(-e)}`;
   }
   return str;
 };
 
-export default function Page() {
+const Page: React.FC = () => {
   const chainId = useChainId();
   const accounts = useAccounts();
   const isActive = useIsActive();
@@ -30,16 +33,14 @@ export default function Page() {
   const [balance, setBalance] = useState<string>('');
   const [ETHValue, setETHValue] = useState<number>(0);
   const [error, setError] = useState<string | undefined>(undefined);
-  const [swap, setSwap] = useState<boolean>(false);
+  const [swap, setSwap] = useState(false);
 
   useEffect(() => {
     const fetchBalance = async () => {
-      if (!provider || !accounts?.[0]) {
-        return;
-      }
+      if (!provider || !accounts?.[0]) return;
 
       try {
-        const signer:any = provider.getSigner();
+        const signer: Signer = provider.getSigner();
         const smartContract = new ethers.Contract(contractAddress, abi, signer);
         const myBalance = await smartContract.balanceOf(accounts[0]);
         setBalance(formatEther(myBalance));
@@ -52,26 +53,21 @@ export default function Page() {
     if (isActive) {
       fetchBalance();
     }
-  }, [isActive, accounts, provider]); // Added accounts and provider to dependencies
+  }, [isActive, provider, accounts]);
 
   const handleBuy = async () => {
-    if (ETHValue <= 0) {
-      return;
-    }
-
-    const signer:any = provider?.getSigner();
-    const smartContract = new ethers.Contract(contractAddress, abi, signer);
-    const weiValue = parseUnits(ETHValue.toString(), "ether");
+    if (ETHValue <= 0) return;
 
     try {
-      const tx = await smartContract.buy({
-        value: weiValue.toString(),
-      });
+      const signer: Signer = provider.getSigner();
+      const smartContract = new ethers.Contract(contractAddress, abi, signer);
+      const weiValue = parseUnits(ETHValue.toString(), "ether");
+      const tx = await smartContract.buy({ value: weiValue });
       setSwap(!swap);
       console.log("Transaction hash:", tx.hash);
     } catch (err) {
-      console.error('Error executing buy:', err);
-      setError('Error executing buy');
+      console.error('Error in transaction:', err);
+      setError('Transaction failed');
     }
   };
 
@@ -87,41 +83,31 @@ export default function Page() {
 
   const handleDisconnect = () => {
     metaMask.resetState();
-    alert(
-      "To fully disconnect, please remove this site from MetaMask's connected sites by locking MetaMask."
-    );
+    alert("To fully disconnect, please remove this site from MetaMask's connected sites by locking MetaMask.");
   };
 
   return (
     <div>
-      <div className="Navbar">
-        <Box sx={{ flexGrow: 1 }}>
-          <AppBar position="static">
-            <Toolbar>
-              <IconButton
-                size="large"
-                edge="start"
-                color="inherit"
-                aria-label="menu"
-                sx={{ mr: 2 }}
-              >
-                <MenuIcon />
-              </IconButton>
-              <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                News
-              </Typography>
-              {isActive ? (
-                <Stack direction="row" spacing={2}>
-                  <Chip className='text-white' label={accounts?.[0] ? getAddressTxt(accounts[0]) : 'No account'} variant="outlined" />
-                  <Button className='text-white' onClick={handleDisconnect}>Disconnect</Button>
-                </Stack>
-              ) : (
-                <Button className='text-white' onClick={handleConnect}>Connect</Button>
-              )}
-            </Toolbar>
-          </AppBar>
-        </Box>
-      </div>
+      <Box sx={{ flexGrow: 1 }}>
+        <AppBar position="static">
+          <Toolbar>
+            <IconButton size="large" edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              News
+            </Typography>
+            {isActive ? (
+              <Stack direction="row" spacing={2}>
+                <Chip className='text-white' label={accounts?.[0] ? getAddressTxt(accounts[0]) : 'No account'} variant="outlined" />
+                <Button className='text-white' onClick={handleDisconnect}>Disconnect</Button>
+              </Stack>
+            ) : (
+              <Button className='text-white' onClick={handleConnect}>Connect</Button>
+            )}
+          </Toolbar>
+        </AppBar>
+      </Box>
       <Card sx={{ minWidth: 275, mt: 2 }}>
         <CardContent>
           <Typography variant="h5" component="div">
@@ -141,8 +127,8 @@ export default function Page() {
             <CardContent>
               <Stack spacing={2}>
                 <Typography>TPTP</Typography>
-                <TextField label="Contract Address" value={contractAddress} />
-                <TextField label="TPTP Balance" value={balance} />
+                <TextField label="Contract Address" value={contractAddress} readOnly />
+                <TextField label="TPTP Balance" value={balance} readOnly />
                 <Divider />
                 <Typography>Buy TPTP (1 ETH = 100 TPTP)</Typography>
                 <TextField
@@ -158,8 +144,12 @@ export default function Page() {
               </Stack>
             </CardContent>
           </Card>
-        ) : null}
+        ) : (
+          <div />
+        )}
       </Container>
     </div>
   );
-}
+};
+
+export default Page;
