@@ -1,75 +1,45 @@
 "use client";
-
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from "react";
+import { initializeConnector } from "@web3-react/core";
+import { MetaMask } from "@web3-react/metamask";
+import { ethers, parseUnits } from "ethers";
+import { formatEther } from "@ethersproject/units";
+import MenuIcon from "@mui/icons-material/Menu";
 import {
-  AppBar, Box, Button, Card, CardContent, Chip,
-  Divider, IconButton, Stack, TextField, Toolbar, Typography, Container
-} from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import {  ethers } from 'ethers';
-import { formatEther, parseUnits } from '@ethersproject/units';
-import { initializeConnector } from '@web3-react/core';
-import { MetaMask } from '@web3-react/metamask';
-import abi from './fonts/api.json';
+  AppBar,
+  Box,
+  Button,
+  IconButton,
+  Toolbar,
+  Typography,
+  Stack,
+  TextField,
+  Container,
+  Card,
+  CardContent,
+  Divider,
+  Chip,
+} from "@mui/material";
+import abi from "./abi.json";
 
-const [metaMask, hooks] = initializeConnector((actions) => new MetaMask({ actions }));
-const { useChainId, useAccounts, useIsActive, useProvider } = hooks;
-
-const contractChain = 11155111;
-const contractAddress = "0x1B6C07Cb03E1B618e2E85C9AFf77035eF4e69159";
-
-const getAddressTxt = (str: string | any[], s = 6, e = 6) => {
-  if (typeof str === 'string' && str.length > s + e) {
-    return `${str.slice(0, s)}...${str.slice(-e)}`;
-  }
-  return str;
-};
+const [metaMask, hooks] = initializeConnector(
+  (actions) => new MetaMask({ actions })
+);
+const { useAccounts, useIsActivating, useIsActive, useProvider } = hooks;
 
 const Page: React.FC = () => {
-  const chainId = useChainId();
+  const contractChain = 11155111;
+  const contractAddress = "0x1B6C07Cb03E1B618e2E85C9AFf77035eF4e69159";
+
   const accounts = useAccounts();
+  const isActivating = useIsActivating();
   const isActive = useIsActive();
   const provider = useProvider();
-  const [balance, setBalance] = useState<string>('');
-  const [ETHValue, setETHValue] = useState<number>(0);
-  const [error, setError] = useState<string | undefined>(undefined);
-  const [swap, setSwap] = useState(false);
 
-  useEffect(() => {
-    const fetchBalance = async () => {
-      if (!provider || !accounts?.[0]) return;
-
-      try {
-        const signer: any = provider?.getSigner();
-        const smartContract = new ethers.Contract(contractAddress, abi, signer);
-        const myBalance = await smartContract.balanceOf(accounts[0]);
-        setBalance(formatEther(myBalance));
-      } catch (err) {
-        console.error('Error fetching balance:', err);
-        setError('Error fetching balance');
-      }
-    };
-
-    if (isActive) {
-      fetchBalance();
-    }
-  }, [isActive, provider, accounts]);
-
-  const handleBuy = async () => {
-    if (ETHValue <= 0) return;
-
-    try {
-      const signer: any = provider?.getSigner();
-      const smartContract = new ethers.Contract(contractAddress, abi, signer);
-      const weiValue = parseUnits(ETHValue.toString(), "ether");
-      const tx = await smartContract.buy({ value: weiValue });
-      setSwap(!swap);
-      console.log("Transaction hash:", tx.hash);
-    } catch (err) {
-      console.error('Error in transaction:', err);
-      setError('Transaction failed');
-    }
-  };
+  const [balance, setBalance] = useState<string>("0");
+  const [myAccount, setMyAccount] = useState<string>("");
+  const [buyToken, setBuyToken] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     void metaMask.connectEagerly().catch(() => {
@@ -77,13 +47,51 @@ const Page: React.FC = () => {
     });
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      if (!provider || !accounts || accounts.length === 0) return;
+
+      const signer: any = provider?.getSigner();
+      const smartContract = new ethers.Contract(contractAddress, abi, signer);
+      const myBalance = await smartContract.balanceOf(accounts[0]);
+      setMyAccount(accounts[0]);
+      setBalance(formatEther(myBalance));
+    })();
+  }, [accounts, isActive, provider]);
+
   const handleConnect = () => {
     metaMask.activate(contractChain);
   };
 
   const handleDisconnect = () => {
     metaMask.resetState();
-    alert("To fully disconnect, please remove this site from MetaMask's connected sites by locking MetaMask.");
+  };
+
+  const handleBuyToken = async () => {
+    if (parseFloat(buyToken) <= 0) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const signer: any = provider?.getSigner();
+      const smartContract = new ethers.Contract(contractAddress, abi, signer);
+      const valueConvertEther = parseUnits(buyToken.toString(), "ether");
+
+      const tx = await smartContract.buy({ value: valueConvertEther });
+      smartContract.on("Transfer", (from, to, tokens) => {
+        const tokenFloat = parseFloat(formatEther(tokens));
+        const balanceFloat = parseFloat(balance);
+        const total = tokenFloat + balanceFloat;
+        setBalance(total.toString());
+        setBuyToken("");
+      });
+      console.log(tx.hash);
+    } catch (error) {
+      console.error("Error buying token:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -99,54 +107,37 @@ const Page: React.FC = () => {
             </Typography>
             {isActive ? (
               <Stack direction="row" spacing={2}>
-                <Chip className='text-white' label={accounts?.[0] ? getAddressTxt(accounts[0]) : 'No account'} variant="outlined" />
-                <Button className='text-white' onClick={handleDisconnect}>Disconnect</Button>
+                <Chip label={myAccount ? `${myAccount.slice(0, 6)}...${myAccount.slice(-4)}` : 'No account'} variant="outlined" />
+                <Button color="inherit" onClick={handleDisconnect}>Disconnect</Button>
               </Stack>
             ) : (
-              <Button className='text-white' onClick={handleConnect}>Connect</Button>
+              <Button color="inherit" onClick={handleConnect}>Connect</Button>
             )}
           </Toolbar>
         </AppBar>
       </Box>
-      <Card sx={{ minWidth: 275, mt: 2 }}>
-        <CardContent>
-          <Typography variant="h5" component="div">
-            <span>ChainId: </span>{chainId}
-          </Typography>
-          <Typography variant="h5" component="div">
-            <span>IsActive: </span>{isActive.toString()}
-          </Typography>
-          <Typography variant="h5" component="div">
-            <span>Accounts: </span>{accounts ? getAddressTxt(accounts[0]) : ''}
-          </Typography>
-        </CardContent>
-      </Card>
       <Container maxWidth="sm" sx={{ mt: 2 }}>
-        {isActive ? (
-          <Card>
-            <CardContent>
-              <Stack spacing={2}>
-                <Typography>TPTP</Typography>
-                <TextField label="Contract Address" value={contractAddress} readOnly />
-                <TextField label="TPTP Balance" value={balance} readOnly />
-                <Divider />
+        <Card>
+          <CardContent>
+            <Typography variant="h5">Contract Address: {contractAddress}</Typography>
+            <Typography variant="h5">Balance: {balance} TPTP</Typography>
+            {isActive && (
+              <>
+                <Divider sx={{ my: 2 }} />
                 <Typography>Buy TPTP (1 ETH = 100 TPTP)</Typography>
                 <TextField
                   label="ETH"
                   type="number"
-                  value={ETHValue}
-                  onChange={e => setETHValue(Number(e.target.value))}
+                  value={buyToken}
+                  onChange={(e) => setBuyToken(e.target.value)}
                 />
-                <Button variant="contained" onClick={handleBuy}>
-                  Buy
+                <Button variant="contained" onClick={handleBuyToken} disabled={isLoading}>
+                  {isLoading ? "Buying..." : "Buy"}
                 </Button>
-                {error && <Typography color="error">{error}</Typography>}
-              </Stack>
-            </CardContent>
-          </Card>
-        ) : (
-          <div />
-        )}
+              </>
+            )}
+          </CardContent>
+        </Card>
       </Container>
     </div>
   );
