@@ -25,14 +25,13 @@ import abi from './fonts/api.json';
 const [metaMask, hooks] = initializeConnector(
   (actions) => new MetaMask({ actions })
 );
-const { useAccounts, useIsActivating, useIsActive, useProvider } = hooks;
+const { useAccounts, useIsActive, useProvider } = hooks;
 
 const Page: React.FC = () => {
   const contractChain = 11155111;
   const contractAddress = "0x1B6C07Cb03E1B618e2E85C9AFf77035eF4e69159";
 
   const accounts = useAccounts();
-  const isActivating = useIsActivating();
   const isActive = useIsActive();
   const provider = useProvider();
 
