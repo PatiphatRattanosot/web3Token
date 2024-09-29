@@ -40,7 +40,7 @@ const Page: React.FC = () => {
       if (!provider || !accounts?.[0]) return;
 
       try {
-        const signer: any = provider.getSigner();
+        const signer: any = provider?.getSigner();
         const smartContract = new ethers.Contract(contractAddress, abi, signer);
         const myBalance = await smartContract.balanceOf(accounts[0]);
         setBalance(formatEther(myBalance));
@@ -59,7 +59,7 @@ const Page: React.FC = () => {
     if (ETHValue <= 0) return;
 
     try {
-      const signer: any = provider.getSigner();
+      const signer: any = provider?.getSigner();
       const smartContract = new ethers.Contract(contractAddress, abi, signer);
       const weiValue = parseUnits(ETHValue.toString(), "ether");
       const tx = await smartContract.buy({ value: weiValue });
