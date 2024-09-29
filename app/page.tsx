@@ -39,7 +39,7 @@ export default function Page() {
       }
 
       try {
-        const signer = provider.getSigner() as unknown as Signer;
+        const signer:any = provider.getSigner() ;
         const smartContract = new ethers.Contract(contractAddress, abi, signer);
         const myBalance = await smartContract.balanceOf(accounts[0]);
 
@@ -61,7 +61,7 @@ export default function Page() {
     }
 
 
-    const signer = provider?.getSigner() as unknown as Signer;
+    const signer:any = provider?.getSigner() ;
     const smartContract = new ethers.Contract(contractAddress, abi, signer);
     const weiValue = parseUnits(ETHValue.toString(), "ether");
     const tx = await smartContract.buy({
