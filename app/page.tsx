@@ -6,7 +6,7 @@ import {
   Divider, IconButton, Stack, TextField, Toolbar, Typography, Container
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import { Signer, ethers } from 'ethers';
+import {  ethers } from 'ethers';
 import { formatEther, parseUnits } from '@ethersproject/units';
 import { initializeConnector } from '@web3-react/core';
 import { MetaMask } from '@web3-react/metamask';
