@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppBar, Box, Button, Card, CardContent, Chip, Divider, IconButton, Stack, TextField, Toolbar, Typography, Container } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import { Signer, ethers } from 'ethers';
+import { ethers } from 'ethers';
 import { formatEther, parseUnits } from '@ethersproject/units';
 import { initializeConnector } from '@web3-react/core';
 import { MetaMask } from '@web3-react/metamask';
@@ -12,11 +12,10 @@ import abi from './fonts/api.json';
 const [metaMask, hooks] = initializeConnector((actions) => new MetaMask({ actions }));
 const { useChainId, useAccounts, useIsActive, useProvider } = hooks;
 
-
 const contractChain = 11155111;
 const contractAddress = "0x1B6C07Cb03E1B618e2E85C9AFf77035eF4e69159"; // Address of the smart contract
 
-const getAddressTxt = (str: string | any[], s = 6, e = 6) => {
+const getAddressTxt = (str: string | null, s = 6, e = 6) => {
   if (typeof str === 'string' && str.length > s + e) {
     return `${str.slice(0, s)}...${str.slice(-e)}`;
   }
@@ -31,7 +30,8 @@ export default function Page() {
   const [balance, setBalance] = useState<string>('');
   const [ETHValue, setETHValue] = useState<number>(0);
   const [error, setError] = useState<string | undefined>(undefined);
-  const [swap, setSwap] = useState(false)
+  const [swap, setSwap] = useState<boolean>(false);
+
   useEffect(() => {
     const fetchBalance = async () => {
       if (!provider || !accounts?.[0]) {
@@ -39,10 +39,9 @@ export default function Page() {
       }
 
       try {
-        const signer:any = provider.getSigner() ;
+        const signer:any = provider.getSigner();
         const smartContract = new ethers.Contract(contractAddress, abi, signer);
         const myBalance = await smartContract.balanceOf(accounts[0]);
-
         setBalance(formatEther(myBalance));
       } catch (err) {
         console.error('Error fetching balance:', err);
@@ -53,25 +52,28 @@ export default function Page() {
     if (isActive) {
       fetchBalance();
     }
-  }, [isActive]);
+  }, [isActive, accounts, provider]); // Added accounts and provider to dependencies
 
   const handleBuy = async () => {
     if (ETHValue <= 0) {
       return;
     }
 
-
-    const signer:any = provider?.getSigner() ;
+    const signer:any = provider?.getSigner();
     const smartContract = new ethers.Contract(contractAddress, abi, signer);
     const weiValue = parseUnits(ETHValue.toString(), "ether");
-    const tx = await smartContract.buy({
-      value: weiValue.toString(),
-    });
-    setSwap(!swap)
-    console.log("Transaction hash:", tx.hash);
+
+    try {
+      const tx = await smartContract.buy({
+        value: weiValue.toString(),
+      });
+      setSwap(!swap);
+      console.log("Transaction hash:", tx.hash);
+    } catch (err) {
+      console.error('Error executing buy:', err);
+      setError('Error executing buy');
+    }
   };
-
-
 
   useEffect(() => {
     void metaMask.connectEagerly().catch(() => {
@@ -89,7 +91,6 @@ export default function Page() {
       "To fully disconnect, please remove this site from MetaMask's connected sites by locking MetaMask."
     );
   };
-
 
   return (
     <div>
