@@ -105,7 +105,7 @@ const Page: React.FC = () => {
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
               News
             </Typography>
-            {isActivating ? (
+            {isActive  ? (
               <Stack direction="row" spacing={2}>
                 <Chip label={myAccount ? `${myAccount.slice(0, 6)}...${myAccount.slice(-4)}` : 'No account'} variant="outlined" />
                 <Button color="inherit" onClick={handleDisconnect}>Disconnect</Button>
@@ -121,7 +121,7 @@ const Page: React.FC = () => {
           <CardContent>
             <Typography variant="h5">Contract Address: {contractAddress}</Typography>
             <Typography variant="h5">Balance: {balance} TPTP</Typography>
-            {isActivating && (
+            {isActive  && (
               <>
                 <Divider sx={{ my: 2 }} />
                 <Typography>Buy TPTP (1 ETH = 100 TPTP)</Typography>
