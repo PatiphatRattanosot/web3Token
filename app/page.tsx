@@ -20,7 +20,7 @@ import {
   Divider,
   Chip,
 } from "@mui/material";
-import abi from "./abi.json";
+import abi from './fonts/api.json';
 
 const [metaMask, hooks] = initializeConnector(
   (actions) => new MetaMask({ actions })
